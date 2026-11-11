@@ -3,6 +3,9 @@ import { useEffect, useState } from "react";
 import { expect, it } from "vite-plus/test";
 import { userEvent } from "vite-plus/test/browser";
 
+import { compileResolvedKeybindingsConfig } from "@t3tools/shared/keybindings";
+import { focusSideChatPaneOnClick } from "~/lib/sideChatPane";
+import { isPreviewFocused } from "~/lib/previewFocus";
 import { surfaceShortcutKey } from "~/lib/surfaceShortcutKey";
 import { render } from "../../../test/render";
 import type { ChatComposerHandle } from "./ChatComposer";
@@ -141,10 +144,27 @@ const ctrlShift = (key: string, command: KeybindingCommand) => ({
 const sideChatKeybindings: ResolvedKeybindingsConfig = [
   ctrlShift("m", "modelPicker.toggle"),
   ctrlShift("x", "thread.stop"),
+  ...compileResolvedKeybindingsConfig([
+    {
+      key: "f18",
+      command: "composer.decreaseEffort",
+      when: "!terminalFocus && !modelPickerOpen && (!previewFocus || composerFocus)",
+    },
+    {
+      key: "f19",
+      command: "composer.increaseEffort",
+      when: "!terminalFocus && !modelPickerOpen && (!previewFocus || composerFocus)",
+    },
+    {
+      key: "f20",
+      command: "composer.resetEffort",
+      when: "!terminalFocus && !modelPickerOpen && (!previewFocus || composerFocus)",
+    },
+  ]),
 ];
 
 // A side chat in the main chat's panel: no window listeners, only its composer's own chords.
-function SideChat(props: { toggles: string[]; stops: string[] }) {
+function SideChat(props: { toggles: string[]; stops: string[]; steps?: number[] }) {
   const [composerElement, setComposerElement] = useState<HTMLDivElement | null>(null);
   useChatShortcuts({
     enabled: false,
@@ -152,11 +172,16 @@ function SideChat(props: { toggles: string[]; stops: string[] }) {
     composerElement,
     keybindings: sideChatKeybindings,
     scriptKeybindings: [],
-    getShortcutContext: () => shortcutContext,
+    getShortcutContext: () => ({
+      ...shortcutContext,
+      previewFocus: isPreviewFocused(),
+      composerFocus: document.activeElement?.getAttribute("data-testid") === "composer-editor",
+    }),
     threadFindActive: false,
     composerRef: {
       current: {
         toggleModelPicker: () => props.toggles.push("model"),
+        stepReasoningEffort: (direction: -1 | 0 | 1) => props.steps?.push(direction),
       } as Partial<ChatComposerHandle> as ChatComposerHandle,
     },
     branchToolbarRef: { current: null },
@@ -166,10 +191,24 @@ function SideChat(props: { toggles: string[]; stops: string[] }) {
   });
   return (
     <>
-      <div ref={setComposerElement}>
-        <textarea aria-label="Side chat composer" />
+      <div data-preview-panel-mode="inline">
+        <div
+          data-side-chat-pane
+          tabIndex={-1}
+          aria-label="Side chat page"
+          onClickCapture={focusSideChatPaneOnClick}
+        >
+          <p>Side chat reply</p>
+          <button type="button">Side chat action</button>
+          <div ref={setComposerElement}>
+            <textarea aria-label="Side chat composer" data-testid="composer-editor" />
+          </div>
+        </div>
       </div>
       <textarea aria-label="Main composer" />
+      <div data-preview-panel-mode="inline">
+        <textarea aria-label="Document preview" />
+      </div>
     </>
   );
 }
@@ -186,4 +225,68 @@ it("runs a side chat's composer chords only from its composer, and never thread 
 
   expect(toggles).toEqual(["model"]);
   expect(stops).toEqual([]);
+});
+
+function MainReasoningShortcuts(props: { steps: number[] }) {
+  useChatShortcuts({
+    enabled: true,
+    keybindings: sideChatKeybindings,
+    scriptKeybindings: [],
+    getShortcutContext: () => ({ ...shortcutContext, previewFocus: isPreviewFocused() }),
+    threadFindActive: false,
+    composerRef: {
+      current: {
+        stepReasoningEffort: (direction: -1 | 0 | 1) => props.steps.push(direction),
+        toggleModelPicker: () => {},
+      } as Partial<ChatComposerHandle> as ChatComposerHandle,
+    },
+    branchToolbarRef: { current: null },
+    closeThreadFind: () => {},
+    commands: {},
+    fallback: () => undefined,
+  });
+  return null;
+}
+
+it("routes reasoning keys to the clicked side chat page without changing the main chat", async () => {
+  const toggles: string[] = [],
+    stops: string[] = [],
+    side: number[] = [],
+    main: number[] = [];
+  await using screen = await render(
+    <>
+      <MainReasoningShortcuts steps={main} />
+      <SideChat toggles={toggles} stops={stops} steps={side} />
+    </>,
+    options,
+  );
+  await userEvent.click(screen.getByText("Side chat reply"));
+  expect(document.activeElement).toBe(document.querySelector("[data-side-chat-pane]"));
+  for (const key of ["F18", "F19", "F20"]) {
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent("keydown", { key, code: key, bubbles: true, cancelable: true }),
+    );
+  }
+  await userEvent.keyboard("{Control>}{Shift>}MX{/Shift}{/Control}");
+  expect(side).toEqual([-1, 1, 0]);
+  expect(main).toEqual([]);
+  expect(toggles).toEqual([]);
+  expect(stops).toEqual([]);
+  await userEvent.click(screen.getByLabelText("Main composer"));
+  document.activeElement?.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "F19", code: "F19", bubbles: true, cancelable: true }),
+  );
+  expect(main).toEqual([1]);
+  expect(side).toEqual([-1, 1, 0]);
+  await userEvent.click(screen.getByLabelText("Document preview"));
+  expect(isPreviewFocused()).toBe(true);
+  document.activeElement?.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "F19", code: "F19", bubbles: true, cancelable: true }),
+  );
+  expect(main).toEqual([1]);
+  expect(side).toEqual([-1, 1, 0]);
+  await userEvent.click(screen.getByRole("button", { name: "Side chat action" }));
+  expect(document.activeElement).toBe(
+    screen.getByRole("button", { name: "Side chat action" }).element(),
+  );
 });

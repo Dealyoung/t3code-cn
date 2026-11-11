@@ -8,6 +8,23 @@ export function isInSideChatPane(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest("[data-side-chat-pane]") !== null;
 }
 
+/** Give non-interactive side-chat content a keyboard target without taking editor or control focus. */
+export function focusSideChatPaneOnClick(event: {
+  readonly button: number;
+  readonly target: EventTarget | null;
+  readonly currentTarget: HTMLElement;
+}): void {
+  if (event.button !== 0) return;
+  if (
+    event.target instanceof Element &&
+    event.target.closest(
+      'a, button, input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="textbox"]',
+    ) !== null
+  )
+    return;
+  event.currentTarget.focus({ preventScroll: true });
+}
+
 /**
  * Opens an embedded side chat's tool diffs in its parent's diff panel and runs its shell commands
  * in the parent's terminal drawer, since the embedded view hides its own. Other panel actions reach

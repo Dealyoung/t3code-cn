@@ -26,7 +26,7 @@ interface ChatShortcutsInput {
   readonly enabled: boolean;
   /**
    * A side chat inside another chat leaves the window to the outer chat. It runs only
-   * composer chords, for keys pressed inside `composerElement`.
+   * composer chords inside `composerElement`, and reasoning chords across its side-chat page.
    */
   readonly embedded?: boolean;
   readonly composerElement?: HTMLElement | null;
@@ -53,6 +53,8 @@ interface ChatShortcutsInput {
 export function useChatShortcuts(input: ChatShortcutsInput) {
   const embedded = input.embedded === true;
   const composerElement = embedded ? (input.composerElement ?? null) : null;
+  const shortcutElement =
+    composerElement?.closest<HTMLElement>("[data-side-chat-pane]") ?? composerElement;
   const handleShortcut = useEffectEvent((event: KeyboardEvent) => {
     const { keybindings } = input;
     if (preventRepeatedTerminalCloseShortcut(event, keybindings)) {
@@ -113,6 +115,15 @@ export function useChatShortcuts(input: ChatShortcutsInput) {
     const command = resolveChatShortcutCommand(event, input.keybindings, input.scriptKeybindings, {
       context: input.getShortcutContext(event.target),
     });
+    const inComposer =
+      event.target instanceof Node && composerElement?.contains(event.target) === true;
+    if (
+      !inComposer &&
+      command !== "composer.increaseEffort" &&
+      command !== "composer.decreaseEffort" &&
+      command !== "composer.resetEffort"
+    )
+      return;
     const run = command
       ? composerShortcutCommands(input.composerRef, input.branchToolbarRef)[command]
       : undefined;
@@ -120,13 +131,13 @@ export function useChatShortcuts(input: ChatShortcutsInput) {
     event.preventDefault();
     event.stopPropagation();
   });
-  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- attaches keydown listeners for chat shortcuts and find dismissal: on the window, or on an embedded chat's composer
+  // oxlint-disable-next-line t3code/no-unreasoned-state-sync -- attaches keydown listeners for chat shortcuts and find dismissal: on the window, or on an embedded chat's scoped page
   useEffect(() => {
     if (embedded) {
-      if (composerElement === null) return;
+      if (shortcutElement === null) return;
       const onComposerKeyDown = (event: KeyboardEvent) => handleComposerShortcut(event);
-      composerElement.addEventListener("keydown", onComposerKeyDown, true);
-      return () => composerElement.removeEventListener("keydown", onComposerKeyDown, true);
+      shortcutElement.addEventListener("keydown", onComposerKeyDown, true);
+      return () => shortcutElement.removeEventListener("keydown", onComposerKeyDown, true);
     }
     const onKeyDownCapture = (event: KeyboardEvent) => handleShortcut(event);
     const onKeyDown = (event: KeyboardEvent) => dismissFind(event);
@@ -136,5 +147,5 @@ export function useChatShortcuts(input: ChatShortcutsInput) {
       window.removeEventListener("keydown", onKeyDownCapture, true);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [composerElement, embedded]);
+  }, [embedded, shortcutElement]);
 }

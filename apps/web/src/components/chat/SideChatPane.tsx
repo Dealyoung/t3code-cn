@@ -20,7 +20,7 @@ import { useComposerDraftStore } from "../../composerDraftStore";
 import { ComposerHandleContext } from "../../composerHandleContext";
 import { useClientSettings } from "../../hooks/useSettings";
 import { releaseComposerDraftUploads } from "../../lib/composerDraftUploads";
-import type { SideChatParentPanel } from "../../lib/sideChatPane";
+import { focusSideChatPaneOnClick, type SideChatParentPanel } from "../../lib/sideChatPane";
 import { readLocalApi } from "../../localApi";
 import { hostRightPanel, useRightPanelStore } from "../../rightPanelStore";
 import { useQuietThreadProjection, useQuietThreadShell } from "../../state/entities";
@@ -133,7 +133,12 @@ export default function SideChatPane(props: {
   };
 
   return (
-    <div data-side-chat-pane className="flex h-full min-h-0 flex-col">
+    <div
+      data-side-chat-pane
+      tabIndex={-1}
+      onClickCapture={focusSideChatPaneOnClick}
+      className="flex h-full min-h-0 flex-col outline-none"
+    >
       <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border pr-1 pl-3">
         <span className="min-w-0 flex-1 truncate text-xs font-medium">
           {shell?.title ?? "Side chat"}
