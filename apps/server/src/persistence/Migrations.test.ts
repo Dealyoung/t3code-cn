@@ -1,3 +1,5 @@
+import { EnvironmentId, MessageId, ThreadId } from "@t3tools/contracts";
+import { serializeAssistantCitation } from "@t3tools/shared/assistantCitations";
 import { assert, describe, it } from "@effect/vitest";
 import * as NodeSqliteClient from "@t3tools/shared/nodeSqliteClient";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -8,7 +10,7 @@ import * as Path from "effect/Path";
 import * as SqlClient from "effect/sql/SqlClient";
 
 import { migrationManifest, runMigrations } from "./Migrations.ts";
-import companyMigration from "./Migrations/081_Company.ts";
+import companyMigration from "./Migrations/082_Company.ts";
 
 const v2Migrations = migrationManifest.filter(([id]) => id >= 55);
 const newerMigrationId = Math.max(...migrationManifest.map(([id]) => id)) + 1;
@@ -31,6 +33,62 @@ const v2TableCount = Effect.gen(function* () {
 
 describe("runMigrations", () => {
   it.effect(
+    "rolls back Company81 history, message search schema and data after backfill failure",
+    () =>
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient;
+        yield* runMigrations({ toMigrationInclusive: 80 });
+        yield* companyMigration;
+        yield* sql`INSERT INTO effect_sql_migrations (migration_id, name) VALUES (81, 'Company')`;
+        yield* sql`INSERT INTO company_settings (singleton, body) VALUES (1, '{"enabled":false}')`;
+        const quote = serializeAssistantCitation({
+          version: 1,
+          environmentId: EnvironmentId.make("environment:local"),
+          threadId: ThreadId.make("source-thread"),
+          messageId: MessageId.make("source-message"),
+          text: "rollback quote",
+          start: 0,
+          end: 14,
+          prefix: "",
+          suffix: "",
+        });
+        const payload = JSON.stringify({ text: `${quote} stabletoken` });
+        yield* sql`INSERT INTO orchestration_v2_projection_messages (message_id, thread_id, role, streaming, created_at, updated_at, payload_json) VALUES ('rollback-message', 'target-thread', 'user', 0, '2026-11-14', '2026-11-14', ${payload})`;
+        yield* sql`CREATE TRIGGER migration_probe_abort BEFORE UPDATE ON orchestration_v2_projection_messages BEGIN SELECT RAISE(ABORT, 'injected backfill failure'); END`;
+        const beforeHistory = yield* history;
+        const beforeSchema =
+          yield* sql`SELECT type, name, sql FROM sqlite_master ORDER BY type, name`;
+        const beforeMessages = yield* sql`SELECT * FROM orchestration_v2_projection_messages`;
+        const beforeIndex =
+          yield* sql`SELECT rowid FROM orchestration_v2_message_search WHERE orchestration_v2_message_search MATCH 'stabletoken'`;
+        const result = yield* Effect.exit(runMigrations());
+        assert.isTrue(Exit.isFailure(result));
+        assert.deepStrictEqual(yield* history, beforeHistory);
+        assert.deepStrictEqual(
+          yield* sql`SELECT type, name, sql FROM sqlite_master ORDER BY type, name`,
+          beforeSchema,
+        );
+        assert.deepStrictEqual(
+          yield* sql`SELECT * FROM orchestration_v2_projection_messages`,
+          beforeMessages,
+        );
+        assert.deepStrictEqual(
+          yield* sql`SELECT rowid FROM orchestration_v2_message_search WHERE orchestration_v2_message_search MATCH 'stabletoken'`,
+          beforeIndex,
+        );
+        assert.deepStrictEqual(yield* sql`SELECT body FROM company_settings`, [
+          { body: '{"enabled":false}' },
+        ]);
+        yield* sql`DROP TRIGGER migration_probe_abort`;
+        yield* runMigrations();
+        assert.includeDeepMembers(yield* history, [
+          [81, "ProjectionMessageSearchText"],
+          [82, "Company"],
+        ]);
+      }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: ":memory:" }))),
+  );
+
+  it.effect(
     "rolls back the legacy company history adjustment when an official migration fails",
     () =>
       Effect.gen(function* () {
@@ -46,12 +104,12 @@ describe("runMigrations", () => {
       }).pipe(Effect.provide(NodeSqliteClient.layer({ filename: ":memory:" }))),
   );
 
-  it.effect.each([77, 80])(
+  it.effect.each([77, 80, 81])(
     "upgrades legacy Company %s without losing data or skipping official migrations",
     (legacyCompanyId) =>
       Effect.gen(function* () {
         const sql = yield* SqlClient.SqlClient;
-        yield* runMigrations({ toMigrationInclusive: legacyCompanyId === 77 ? 76 : 79 });
+        yield* runMigrations({ toMigrationInclusive: legacyCompanyId - 1 });
         yield* companyMigration;
         yield* sql`INSERT INTO company_settings (singleton, body) VALUES (1, '{"enabled":false}')`;
         yield* sql`INSERT INTO company_tasks (id, body, updated_at) VALUES ('task-1', '{"status":"done"}', '2026-11-01')`;
@@ -63,7 +121,8 @@ describe("runMigrations", () => {
           [78, "DropOrchestrationEventCorrelationIndex"],
           [79, "DelegatedRecoveryIndexes"],
           [80, "ScheduledTaskThreadMode"],
-          [81, "Company"],
+          [81, "ProjectionMessageSearchText"],
+          [82, "Company"],
         ]);
         assert.deepStrictEqual(yield* sql`SELECT body FROM company_settings`, [
           { body: '{"enabled":false}' },

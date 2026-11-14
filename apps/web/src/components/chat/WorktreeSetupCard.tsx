@@ -1,3 +1,5 @@
+import { useI18n as useFullUiLocale } from "~/i18n/WebI18nContext";
+import { translateWebSource as translateFullUiCopy } from "~/i18n/messages";
 import { useI18n as useStaticUiLocale } from "~/i18n/WebI18nContext";
 import { translateWebSource as translateStaticUiCopy } from "~/i18n/messages";
 import {
@@ -14,12 +16,12 @@ import {
   MinusIcon,
   TerminalIcon,
   XIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
 } from "lucide-react";
-import { ChevronDown, ChevronRight } from "lucide";
 import { useState, type ReactNode } from "react";
 
 import { Button } from "~/components/ui/button";
-import { MorphIcon } from "~/components/MorphIcon";
 import { Spinner } from "~/components/ui/spinner";
 import { MiddleTruncate } from "../ui/middle-truncate";
 import { observeVisibleAnimation } from "~/lib/visibleAnimation";
@@ -323,6 +325,7 @@ export function WorktreeSetupCard({
 }: WorktreeSetupCardProps & {
   embedded?: boolean;
 }) {
+  const { locale: fullUiLocale } = useFullUiLocale();
   const { locale: staticUiLocale } = useStaticUiLocale();
   const running = snapshot.phase === "running";
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -373,8 +376,8 @@ export function WorktreeSetupCard({
           aria-expanded={detailsOpen}
           onClick={() => setDetailsOpen((open) => !open)}
         >
-          <MorphIcon aria-hidden icon={detailsOpen ? ChevronDown : ChevronRight} />
-          {translateStaticUiCopy(staticUiLocale, "Details")}
+          {detailsOpen ? <ChevronDownIcon aria-hidden /> : <ChevronRightIcon aria-hidden />}
+          {translateFullUiCopy(fullUiLocale, "Details")}
         </Button>
         {showTerminal ? (
           <Button type="button" size="xs" variant="ghost-muted" onClick={onOpenTerminal}>

@@ -1,3 +1,5 @@
+import { useI18n as useStaticUiLocale } from "~/i18n/WebI18nContext";
+import { translateWebSource as translateStaticUiCopy } from "~/i18n/messages";
 import { useI18n } from "~/i18n/WebI18nContext";
 import { translateWebSource } from "~/i18n/messages";
 import type { CommandOutputView } from "@t3tools/client-runtime/state/command-output";
@@ -31,6 +33,7 @@ export function CommandOutputPanel(props: {
   readonly itemId: TurnItemId;
   readonly source?: TurnItemSource["commandOutput"] | undefined;
 }) {
+  const { locale: staticUiLocale } = useStaticUiLocale();
   const { locale: newCopyLocale } = useI18n();
   const input = { threadId: props.threadId, itemId: props.itemId };
   const { data, error } = useEnvironmentQuery<CommandOutputView, unknown>(
@@ -71,33 +74,31 @@ export function CommandOutputPanel(props: {
   // Parse after all hooks to preserve the text/theme compiler cache.
   const spans = terminalOutputSpans(text, TERMINAL_PALETTES[resolvedTheme]);
   return (
-    <div>
+    <div
+      ref={scrollRef}
+      onScroll={(event) => {
+        const element = event.currentTarget;
+        followRef.current =
+          element.scrollHeight - element.scrollTop - element.clientHeight <= FOLLOW_SLACK_PX;
+      }}
+      className="max-h-80 overflow-auto text-muted-foreground"
+    >
       {data?.output.truncated ? (
-        <div className="text-muted-foreground italic">
-          {translateWebSource(newCopyLocale, "Earlier output not shown")}
+        <div className="italic">
+          {translateStaticUiCopy(staticUiLocale, "Earlier output not shown")}
         </div>
       ) : null}
-      <div
-        ref={scrollRef}
-        onScroll={(event) => {
-          const element = event.currentTarget;
-          followRef.current =
-            element.scrollHeight - element.scrollTop - element.clientHeight <= FOLLOW_SLACK_PX;
-        }}
-        className="max-h-80 overflow-auto text-muted-foreground"
-      >
-        {spans.map((span, index) =>
-          span.style === null ? (
-            span.text
-          ) : (
-            // Spans never reorder and are rebuilt on each update.
-            // oxlint-disable-next-line react/no-array-index-key
-            <span key={index} style={span.style}>
-              {span.text}
-            </span>
-          ),
-        )}
-      </div>
+      {spans.map((span, index) =>
+        span.style === null ? (
+          span.text
+        ) : (
+          // Spans never reorder and are rebuilt on each update.
+          // oxlint-disable-next-line react/no-array-index-key
+          <span key={index} style={span.style}>
+            {span.text}
+          </span>
+        ),
+      )}
     </div>
   );
 }

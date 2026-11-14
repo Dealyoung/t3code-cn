@@ -3,7 +3,7 @@ import { translateWebSource as translateStaticUiCopy } from "~/i18n/messages";
 import { translateWebSource } from "~/i18n/messages";
 import { useI18n } from "~/i18n/WebI18nContext";
 import type { EnvironmentId, PullRequestRef, PullRequestReviewGuideStop } from "@t3tools/contracts";
-import { SparklesIcon, TriangleAlertIcon } from "lucide-react";
+import { ScrollTextIcon, TriangleAlertIcon } from "lucide-react";
 import { useEffect, useEffectEvent } from "react";
 
 import type { ReviewCommentContext } from "~/reviewCommentContext";
@@ -54,6 +54,7 @@ export function PullRequestGuideTab({
   onOpenFile: (path: string) => void;
   onTourShown?: (() => void) | undefined;
 }) {
+  const { locale: staticUiLocale } = useStaticUiLocale();
   const { locale: uiLocale } = useI18n();
   const { query, data, running, canWrite, write } = useReviewGuideWriter({
     environmentId,
@@ -99,8 +100,8 @@ export function PullRequestGuideTab({
   const writeButton = (label: string, size: "sm" | "xs") =>
     canWrite ? (
       <Button size={size} variant="outline" disabled={running} onClick={() => void write()}>
-        {running ? <Spinner /> : <SparklesIcon aria-hidden className="size-3.5" />}
-        {running ? translateWebSource(uiLocale, "Reading the change...") : label}
+        {running ? <Spinner /> : <ScrollTextIcon aria-hidden className="size-3.5" />}
+        {running ? translateStaticUiCopy(staticUiLocale, "Reading the change...") : label}
       </Button>
     ) : null;
 

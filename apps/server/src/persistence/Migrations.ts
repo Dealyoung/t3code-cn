@@ -83,8 +83,9 @@ import Migration0077 from "./Migrations/077_RepairBooleanSettledOverride.ts";
 import Migration0078 from "./Migrations/078_DropOrchestrationEventCorrelationIndex.ts";
 import Migration0079 from "./Migrations/079_DelegatedRecoveryIndexes.ts";
 import Migration0080 from "./Migrations/080_ScheduledTaskThreadMode.ts";
+import Migration0081 from "./Migrations/081_ProjectionMessageSearchText.ts";
 
-import Migration0081 from "./Migrations/081_Company.ts";
+import Migration0082 from "./Migrations/082_Company.ts";
 
 const migrationEntries = [
   [1, "OrchestrationEvents", Migration0001],
@@ -168,7 +169,8 @@ const migrationEntries = [
   [78, "DropOrchestrationEventCorrelationIndex", Migration0078],
   [79, "DelegatedRecoveryIndexes", Migration0079],
   [80, "ScheduledTaskThreadMode", Migration0080],
-  [81, "Company", Migration0081],
+  [81, "ProjectionMessageSearchText", Migration0081],
+  [82, "Company", Migration0082],
 ] as const;
 
 export const migrationManifest = migrationEntries.map(([id, name]) => [id, name] as const);
@@ -270,7 +272,7 @@ export const runMigrations = Effect.fn("runMigrations")(function* (
   const sql = yield* SqlClient.SqlClient;
   return yield* sql.withTransaction(
     Effect.gen(function* () {
-      if (options.toMigrationInclusive === undefined || options.toMigrationInclusive >= 81) {
+      if (options.toMigrationInclusive === undefined || options.toMigrationInclusive >= 82) {
         const exists =
           yield* sql`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'effect_sql_migrations'`;
         if (exists.length > 0) {
@@ -279,14 +281,16 @@ export const runMigrations = Effect.fn("runMigrations")(function* (
             name: string;
           }>`SELECT migration_id, name FROM effect_sql_migrations WHERE migration_id >= 77`;
           const legacy = history.find(
-            (row) => (row.migration_id === 77 || row.migration_id === 80) && row.name === "Company",
+            (row) => [77, 80, 81].includes(row.migration_id) && row.name === "Company",
           );
           if (legacy) {
             const tables = yield* sql<{
               name: string;
             }>`SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('company_settings', 'company_tasks', 'company_receipts')`;
             const unexpected = history.some(
-              (row) => row !== legacy && (legacy.migration_id === 77 || row.migration_id >= 80),
+              (row) =>
+                row !== legacy &&
+                (legacy.migration_id === 77 || row.migration_id >= legacy.migration_id),
             );
             if (unexpected || tables.length !== 3) {
               return yield* new Migrator.MigrationError({

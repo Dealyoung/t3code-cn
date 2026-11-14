@@ -15,7 +15,6 @@ import {
   resolveSourceControlWriterModelSelection,
 } from "@t3tools/shared/serverSettings";
 
-import type { WebMessageKey } from "../../i18n/messages";
 import { useI18n } from "../../i18n/WebI18nContext";
 import {
   useScopedSettings,
@@ -49,23 +48,23 @@ import {
 import { AdvancedSettings } from "./AdvancedSettings";
 import { searchableSetting } from "./settingsSearch";
 
-const MODE_OPTION_MESSAGE_KEYS = {
-  repo_conventions: {
-    label: "sourceControl.writingStyle.repoConventions",
-    description: "sourceControl.writingStyle.repoConventionsDescription",
-  },
-  conventional_commits: {
-    label: "sourceControl.writingStyle.conventionalCommits",
-    description: "sourceControl.writingStyle.conventionalCommitsDescription",
-  },
-  custom: {
-    label: "sourceControl.writingStyle.custom",
-    description: "sourceControl.writingStyle.customDescription",
-  },
-} as const satisfies Record<
-  SourceControlWritingStyleMode,
-  { readonly label: WebMessageKey; readonly description: WebMessageKey }
->;
+const MODE_OPTIONS: Record<SourceControlWritingStyleMode, { label: string; description: string }> =
+  {
+    repo_conventions: {
+      label: "Repository conventions",
+      description:
+        "Commit messages and pull request titles and descriptions match each project's history.",
+    },
+    conventional_commits: {
+      label: "Conventional Commits",
+      description: "Conventional Commit prefixes, with short pull request titles and descriptions.",
+    },
+    custom: {
+      label: "Custom instructions",
+      description:
+        "Your instructions shape commit messages and pull request titles and descriptions.",
+    },
+  };
 
 export function SourceControlWritingSettingsSection() {
   const { locale: staticUiLocale } = useStaticUiLocale();
@@ -202,7 +201,7 @@ export function SourceControlWritingSettingsSection() {
   return (
     <SettingsSection
       id="source-control-text-generation"
-      title={translateStaticUiCopy(staticUiLocale, "Writing & review")}
+      title={translateStaticUiCopy(staticUiLocale, "Commits & pull requests")}
     >
       <SettingsRow
         serverScoped
@@ -210,11 +209,11 @@ export function SourceControlWritingSettingsSection() {
         mixed={writingStyleMixed}
         {...searchableSetting("source-control-writing-style")}
         title={t("sourceControl.writingStyle.title")}
-        description={t(MODE_OPTION_MESSAGE_KEYS[style.mode].description)}
+        description={translateStaticUiCopy(staticUiLocale, MODE_OPTIONS[style.mode].description)}
         resetAction={
           isSourceControlWritingStyleDirty ? (
             <SettingResetButton
-              label={t("sourceControl.writingStyle.title")}
+              label={translateStaticUiCopy(staticUiLocale, "commit and pull request writing")}
               onClick={() =>
                 updateSettings({
                   sourceControlWritingStyle: {
@@ -242,22 +241,22 @@ export function SourceControlWritingSettingsSection() {
             <SelectTrigger
               size="sm"
               className="w-full sm:w-56"
-              aria-label={t("sourceControl.writingStyle.title")}
+              aria-label={translateStaticUiCopy(staticUiLocale, "Commit and pull request writing")}
             >
               <SelectValue>
                 {(value: SourceControlWritingStyleMode | null) =>
-                  value === null ? "Mixed" : t(MODE_OPTION_MESSAGE_KEYS[value].label)
+                  value === null
+                    ? "Mixed"
+                    : translateStaticUiCopy(staticUiLocale, MODE_OPTIONS[value].label)
                 }
               </SelectValue>
             </SelectTrigger>
             <SelectPopup align="end" alignItemWithTrigger={false}>
-              {(Object.keys(MODE_OPTION_MESSAGE_KEYS) as SourceControlWritingStyleMode[]).map(
-                (mode) => (
-                  <SelectItem key={mode} hideIndicator value={mode}>
-                    {t(MODE_OPTION_MESSAGE_KEYS[mode].label)}
-                  </SelectItem>
-                ),
-              )}
+              {(Object.keys(MODE_OPTIONS) as SourceControlWritingStyleMode[]).map((mode) => (
+                <SelectItem key={mode} hideIndicator value={mode}>
+                  {translateStaticUiCopy(staticUiLocale, MODE_OPTIONS[mode].label)}
+                </SelectItem>
+              ))}
             </SelectPopup>
           </Select>
         }
@@ -272,7 +271,7 @@ export function SourceControlWritingSettingsSection() {
                   rows={4}
                   aria-label={translateStaticUiCopy(
                     staticUiLocale,
-                    "Custom source control instructions for all selected environments",
+                    "Custom commit and pull request instructions for all selected environments",
                   )}
                   placeholder={translateStaticUiCopy(
                     staticUiLocale,
@@ -323,8 +322,14 @@ export function SourceControlWritingSettingsSection() {
                 }
               }}
               rows={4}
-              placeholder={t("sourceControl.writingStyle.customPlaceholder")}
-              aria-label={t("sourceControl.writingStyle.custom")}
+              placeholder={translateStaticUiCopy(
+                staticUiLocale,
+                "Keep commit subjects under 60 characters. Keep pull request descriptions short and plain.",
+              )}
+              aria-label={translateStaticUiCopy(
+                staticUiLocale,
+                "Custom commit and pull request instructions",
+              )}
             />
           </div>
         ) : null}
@@ -527,13 +532,15 @@ export function SourceControlWritingSettingsSection() {
           settingKeys={["sourceControlWritingStyle"]}
           mixed={templatesMixed}
           {...searchableSetting("follow-change-request-templates")}
-          title={t("sourceControl.followTemplates.title")}
-          description={t("sourceControl.followTemplates.description")}
+          description={translateStaticUiCopy(
+            staticUiLocale,
+            "Use the repository's pull request template when it has one.",
+          )}
           resetAction={
             templatesMixed ||
             style.followChangeRequestTemplates !== defaults.followChangeRequestTemplates ? (
               <SettingResetButton
-                label={t("sourceControl.followTemplates.title")}
+                label={translateStaticUiCopy(staticUiLocale, "pull request templates")}
                 onClick={() =>
                   updateSettings({
                     sourceControlWritingStyle: {
@@ -555,7 +562,7 @@ export function SourceControlWritingSettingsSection() {
                   },
                 })
               }
-              aria-label={t("sourceControl.followTemplates.title")}
+              aria-label={translateStaticUiCopy(staticUiLocale, "Follow pull request templates")}
             />
           }
         />
@@ -566,7 +573,7 @@ export function SourceControlWritingSettingsSection() {
           {...searchableSetting("source-control-writer-model")}
           description={translateStaticUiCopy(
             staticUiLocale,
-            "Model for source control text and branch or bookmark names. When disabled, use the text generation model configured for this environment.",
+            "Model for commit messages, pull request text, and branch or bookmark names. When disabled, use the text generation model configured for this environment.",
           )}
           control={
             !hasServerTargets ? (

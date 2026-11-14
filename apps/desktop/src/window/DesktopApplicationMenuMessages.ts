@@ -22,6 +22,7 @@ export interface DesktopApplicationMenuMessages {
   readonly cut: string;
   readonly copy: string;
   readonly copyLink: string;
+  readonly copyEmail: string;
   readonly copyImage: string;
   readonly noSuggestions: string;
   readonly paste: string;
@@ -74,6 +75,7 @@ const messages = {
     cut: "Cut",
     copy: "Copy",
     copyLink: "Copy Link",
+    copyEmail: "Copy Email Address",
     copyImage: "Copy Image",
     noSuggestions: "No suggestions",
     paste: "Paste",
@@ -124,6 +126,7 @@ const messages = {
     cut: "剪切",
     copy: "复制",
     copyLink: "复制链接",
+    copyEmail: "复制电子邮件地址",
     copyImage: "复制图片",
     noSuggestions: "无拼写建议",
     paste: "粘贴",

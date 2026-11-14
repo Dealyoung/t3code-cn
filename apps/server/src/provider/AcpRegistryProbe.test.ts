@@ -273,7 +273,7 @@ describe("ACP Registry probe", () => {
     },
   );
 
-  it("bounds and de-duplicates advertised commands", () => {
+  it("keeps every distinct advertised command and de-duplicates the rest", () => {
     const commands = normalizeAcpRegistryCommands([
       {
         name: "create_plan",
@@ -285,9 +285,12 @@ describe("ACP Registry probe", () => {
         name: `command_${index}`,
         description: "",
       })),
+      { name: "$late-skill", description: "Advertised after 1024 commands" },
+      { name: "skill:late-native", description: "Native skill after 1024 commands" },
     ]);
 
-    expect(commands.slashCommands).toHaveLength(1_024);
+    expect(commands.slashCommands).toHaveLength(1101);
+    expect(commands.slashCommands.at(-1)).toEqual({ name: "command_1099" });
     expect(commands.slashCommands[0]).toEqual({
       name: "create_plan",
       description: "Create a plan",
@@ -296,7 +299,8 @@ describe("ACP Registry probe", () => {
     expect(
       commands.slashCommands.filter((command) => command.name.toLowerCase() === "create_plan"),
     ).toHaveLength(1);
-    expect(commands.skills).toEqual([]);
+    expect(commands.skills.map((skill) => skill.name)).toEqual(["late-skill", "late-native"]);
+    expect(commands.skills[1]?.invocationCommand).toBe("/skill:late-native");
   });
 
   it("routes dollar-prefixed ACP commands to the provider skill menu", () => {

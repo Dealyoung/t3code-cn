@@ -4,8 +4,8 @@
 
 - **代码与反馈**：[Dealyoung/t3code-cn](https://github.com/Dealyoung/t3code-cn)
 - **安装包发布入口**：[GitHub Releases](https://github.com/Dealyoung/t3code-cn/releases)
-- **当前基础**：官方 `v0.1.8`，提交 `bf469bb19669671d0df2efda74ed73867a7137c0`
-- **当前中文构建**：`0.1.8-zh-test.1`，macOS Apple Silicon，测试发布
+- **当前基础**：官方 `v0.1.9`，提交 `24e77473ecf41bc1f7142529c7911c1c1aae1d76`
+- **当前中文构建**：`0.1.9-zh-test.1`，macOS Apple Silicon，测试发布
 - **汉化参考**：[ZhiweiXiao98/t3code](https://github.com/ZhiweiXiao98/t3code)，来源与许可证见 [NOTICE.zh-CN.md](./NOTICE.zh-CN.md)
 
 ## 中文版包含什么

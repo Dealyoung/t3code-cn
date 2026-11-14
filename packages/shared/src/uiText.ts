@@ -1,6 +1,63 @@
 import type { ResolvedAppLocale } from "./appLocale.ts";
 
 const CHINESE_UI_MESSAGES: Readonly<Record<string, string>> = {
+  "Could not check provider updates": "无法检查提供商更新",
+  "Background work": "后台工作",
+  "Image attachment": "图片附件",
+  "Pi · {value0}": "Pi · {value0}",
+  "Steer · waiting to be read": "引导消息 · 等待读取",
+  "opens the sign-in page, choose what it may do and approve with your T3 Connect account.":
+    "会打开登录页面。请选择允许的操作，并使用你的 T3 Connect 账号批准。",
+  "Copy {value0}": "复制 {value0}",
+  "Check this address": "请核对该地址",
+  "This app cannot confirm it is one of your machines. The pairing code you paste is sent there.":
+    "此应用无法确认该地址属于你的设备。你粘贴的配对码将发送到该地址。",
+  "Status only": "仅状态",
+  "Status and messages": "状态和消息",
+  Everything: "全部内容",
+  "What a screen reader hears from the open thread: a turn starting, needing you, and ending. Status and messages adds what the agent writes before its last message. Everything adds each step.":
+    "设置屏幕阅读器如何朗读当前会话：一轮开始、需要你处理以及结束。“状态和消息”还会朗读 Agent 在最终消息前输出的内容；“全部内容”会加入每个执行步骤。",
+  "screen reader announcements": "屏幕阅读器播报",
+  "Screen reader announcements": "屏幕阅读器播报",
+  "Commit messages and pull request titles and descriptions match each project's history.":
+    "提交说明以及拉取请求的标题和描述遵循各项目的历史风格。",
+  "Conventional Commit prefixes, with short pull request titles and descriptions.":
+    "使用 Conventional Commits 前缀，并保持拉取请求标题与描述简短。",
+  "Your instructions shape commit messages and pull request titles and descriptions.":
+    "你的指令将用于提交说明以及拉取请求的标题和描述。",
+  "Commits & pull requests": "提交与拉取请求",
+  "Commit and pull request writing": "提交与拉取请求写作",
+  "commit and pull request writing": "提交与拉取请求写作",
+  "Keep commit subjects under 60 characters. Keep pull request descriptions short and plain.":
+    "提交标题不超过 60 个字符。拉取请求描述保持简短、直白。",
+  "Custom commit and pull request instructions": "自定义提交与拉取请求指令",
+  "Use the repository's pull request template when it has one.": "仓库有拉取请求模板时使用该模板。",
+  "pull request templates": "拉取请求模板",
+  "Follow pull request templates": "遵循拉取请求模板",
+  "After 1 hour": "1 小时后",
+  "Path to a model file or folder already on this environment":
+    "此环境中已有模型文件或文件夹的路径",
+  "Already downloaded elsewhere? Paste the model file or folder path":
+    "已在其他位置下载？请粘贴模型文件或文件夹路径",
+  "Use existing": "使用已有模型",
+  "Welcome page": "欢迎页",
+  "Use reset": "使用重置额度",
+  "Using…": "正在使用…",
+  "Reset applied. Your windows have cleared.": "已应用重置，用量窗口已清空。",
+  "Nothing to reset right now.": "目前没有需要重置的用量。",
+  "No reset credits banked": "没有已积累的重置额度",
+  "That credit was already redeemed.": "该额度已使用。",
+  "{value0} · {value1} left · expires in {value2}": "{value0} · 剩余 {value1} 次 · {value2} 后到期",
+  "{value0} · {value1} left": "{value0} · 剩余 {value1} 次",
+  "{value0} banked · expires in {value1}": "已积累 {value0} 次 · {value1} 后到期",
+  "{value0} banked": "已积累 {value0} 次",
+  "{value0} reset credits banked · next expires in {value1}":
+    "已积累 {value0} 次重置额度 · 下次到期在 {value1} 后",
+  "{value0} reset credits banked": "已积累 {value0} 次重置额度",
+  "{value0} reset credit banked": "已积累 {value0} 次重置额度",
+  "This redeems one credit on your account and clears the current rate-limit windows. It cannot be undone.":
+    "这将使用账号中的一次重置额度，并清空当前限额窗口。此操作无法撤销。",
+
   "Your next message starts a fresh session": "下一条消息将开始新的会话上下文",
   "The agent won't see earlier messages in this thread.": "Agent 将无法看到此会话中更早的消息。",
   "Start voice input": "开始语音输入",
