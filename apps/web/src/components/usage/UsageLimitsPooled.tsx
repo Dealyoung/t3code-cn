@@ -8,6 +8,7 @@ import {
   collectLimitAccounts,
   collectExternalUsageLinks,
   collectLimitNotices,
+  formatUsageWindowLabel,
   collectLimitPools,
   cursorUsageWindowDetails,
   displayLimitWindows,
@@ -591,7 +592,9 @@ function PoolWindowCard({
   return (
     <div className="grid items-center gap-x-6 gap-y-3 rounded-lg border border-border/60 p-4 md:grid-cols-[11rem_minmax(0,1fr)]">
       <div className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-foreground">{label ?? pool.label}</span>
+        <span className="text-sm font-medium text-foreground">
+          {label ?? formatUsageWindowLabel(pool, uiLocale)}
+        </span>
         <span className="flex items-baseline gap-2">
           <span className="text-3xl font-semibold text-foreground tabular-nums">
             {pool.remainingPercent}%
@@ -659,7 +662,11 @@ export function UsageLimitsPooled({
   const [segmentPopover] = useState(() => PopoverCreateHandle<SegmentPayload>());
   const segmentPopoverActions = useRef<PopoverPrimitive.Root.Actions | null>(null);
   const pools = collectLimitPools(collectLimitAccounts(presentations), now);
-  const notices = collectLimitNotices(presentations);
+  const notices = collectLimitNotices(
+    presentations,
+    translateWebSource(uiLocale, "No accounts reported."),
+    (message) => translateWebSource(uiLocale, message),
+  );
   const externalLinks = collectExternalUsageLinks(presentations);
   return (
     <div className="flex flex-col gap-8">

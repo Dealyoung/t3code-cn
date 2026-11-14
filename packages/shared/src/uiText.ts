@@ -1,6 +1,11 @@
 import type { ResolvedAppLocale } from "./appLocale.ts";
 
 const CHINESE_UI_MESSAGES: Readonly<Record<string, string>> = {
+  "Could not read limits.": "无法读取限额。",
+  "No limits reported.": "未报告限额。",
+  "No accounts reported.": "未报告账号。",
+  "⌘-click": "按住 ⌘ 单击",
+  "Ctrl-click": "按住 Ctrl 单击",
   "Could not check provider updates": "无法检查提供商更新",
   "Background work": "后台工作",
   "Image attachment": "图片附件",

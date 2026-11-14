@@ -71,7 +71,10 @@ function ThreadServersList(props: ThreadServersPanelProps) {
   const [visibleCount, setVisibleCount] = useState(SERVER_PAGE_COUNT);
 
   if (servers.length === 0) return null;
-  const externalClickLabel = isMacPlatform(navigator.platform) ? "⌘-click" : "Ctrl-click";
+  const externalClickLabel = translateStaticUiCopy(
+    staticUiLocale,
+    isMacPlatform(navigator.platform) ? "⌘-click" : "Ctrl-click",
+  );
   const threadRef = scopeThreadRef(props.environmentId, props.threadId);
   const hiddenCount = Math.max(0, servers.length - visibleCount);
 
@@ -79,7 +82,7 @@ function ThreadServersList(props: ThreadServersPanelProps) {
     toastManager.add(
       stackedThreadToast({
         type: "error",
-        title,
+        title: translateStaticUiCopy(staticUiLocale, title),
         description: error instanceof Error ? error.message : String(error),
       }),
     );
@@ -152,7 +155,13 @@ function ThreadServersList(props: ThreadServersPanelProps) {
                       localhost:{server.port}
                     </span>
                     <span className="truncate text-2xs font-normal leading-4 text-muted-foreground">
-                      {[server.terminal === null ? "Agent" : "Terminal", server.processName]
+                      {[
+                        translateStaticUiCopy(
+                          staticUiLocale,
+                          server.terminal === null ? "Agent" : "Terminal",
+                        ),
+                        server.processName,
+                      ]
                         .filter(Boolean)
                         .join(" · ")}
                     </span>

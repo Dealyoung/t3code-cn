@@ -16,6 +16,7 @@ import {
   collectLimitAccounts,
   collectExternalUsageLinks,
   collectLimitNotices,
+  formatUsageWindowLabel,
   collectLimitPools,
   elapsedShare,
   exhaustedUsageWindow,
@@ -953,6 +954,23 @@ describe("pooled account columns", () => {
       row.columns.map((member) => (member.window ? member.account.key : null)),
     );
 
+  it("keeps pooled label ownership paired with the selected raw label", () => {
+    const tagged = {
+      ...window,
+      label: "Owned session",
+      labelDescriptor: { code: "session" as const },
+    };
+    const rawWindow = { ...window, label: "Custom raw window" };
+    const pooled = collectLimitPools([account("a", [tagged]), account("b", [rawWindow])], now)[0]!
+      .windows[0]!;
+    expect(pooled.label).toBe("Owned session");
+    expect(pooled.labelDescriptor).toEqual(tagged.labelDescriptor);
+    const untagged = collectLimitPools([account("a", [rawWindow]), account("b", [tagged])], now)[0]!
+      .windows[0]!;
+    expect(untagged.label).toBe("Custom raw window");
+    expect(untagged.labelDescriptor).toBeUndefined();
+  });
+
   // regression: #20349 sessions stay visible while the weekly quota is exhausted
   it.each([
     ["claudeAgent", "13:00", 40, "14:00", 100],
@@ -1554,5 +1572,93 @@ describe("ChatGPT sharing presentation", () => {
         auth: { status: "unauthenticated", subscriptionSharing: true },
       }),
     ).toBe(false);
+  });
+});
+
+describe("owned usage copy", () => {
+  it("translates only explicit window descriptors and preserves display names and raw labels", () => {
+    const raw = { label: "Settings" };
+    expect(formatUsageWindowLabel(raw, "zh-CN")).toBe("Settings");
+    const session = { label: "Session", labelDescriptor: { code: "session" as const } };
+    expect(formatUsageWindowLabel(session, "zh-CN")).toBe("会话");
+    expect(formatUsageWindowLabel(session, "en")).toBe("Session");
+    for (const displayName of ["Settings", "$& {0}\n中文", "  Fable  "]) {
+      const scoped = {
+        label: `Weekly · ${displayName}`,
+        labelDescriptor: { code: "weeklyScoped" as const, displayName },
+      };
+      expect(formatUsageWindowLabel(scoped, "zh-CN")).toBe(`每周 · ${displayName}`);
+      expect(formatUsageWindowLabel(scoped, "en")).toBe(scoped.label);
+    }
+  });
+  it("translates fallback notices without rewriting identical provider and source diagnostics or names", () => {
+    const checkedAt = "2026-09-03T11:00:00.000Z";
+    const sources = new Map([
+      [
+        EnvironmentId.make("a"),
+        {
+          entry: { target: { label: "Settings" } },
+          serverConfig: {
+            providers: [
+              provider({
+                displayName: "Settings",
+                usageLimits: { checkedAt, windows: [], unavailable: { reason: "probeFailed" } },
+              }),
+              provider({
+                displayName: "Usage",
+                usageLimits: {
+                  checkedAt,
+                  windows: [],
+                  unavailable: { reason: "probeFailed", message: "Could not read limits." },
+                },
+              }),
+              provider({ displayName: "Custom", usageLimits: { checkedAt, windows: [] } }),
+            ],
+            usageLimitSources: [
+              {
+                id: UsageLimitSourceId.make("raw"),
+                kind: "cliproxy" as const,
+                label: "Settings $&",
+                checkedAt,
+                accounts: [],
+                error: "No accounts reported.",
+              },
+              {
+                id: UsageLimitSourceId.make("empty"),
+                kind: "cliproxy" as const,
+                label: "Empty",
+                checkedAt,
+                accounts: [],
+              },
+            ],
+          },
+        },
+      ],
+      [
+        EnvironmentId.make("b"),
+        {
+          entry: { target: { label: "Other" } },
+          serverConfig: { providers: [], usageLimitSources: [] },
+        },
+      ],
+    ]);
+    expect(
+      collectLimitNotices(sources, "未报告账号。", (text) =>
+        text === "Could not read limits." ? "无法读取限额。" : "未报告限额。",
+      ),
+    ).toEqual([
+      "Settings · Settings: 无法读取限额。",
+      "Settings · Usage: Could not read limits.",
+      "Settings · Custom: 未报告限额。",
+      "Settings · Settings $&: No accounts reported.",
+      "Settings · Empty: 未报告账号。",
+    ]);
+    expect(collectLimitNotices(sources)).toEqual([
+      "Settings · Settings: Could not read limits.",
+      "Settings · Usage: Could not read limits.",
+      "Settings · Custom: No limits reported.",
+      "Settings · Settings $&: No accounts reported.",
+      "Settings · Empty: No accounts reported.",
+    ]);
   });
 });

@@ -108,13 +108,14 @@ describe("buildThreadActionMenuItems", () => {
     const preset = items
       .find((item) => item.id === "snooze")
       ?.children?.find((item) => item.id === "snooze:hour");
-    expect(preset?.label).toBe(`${translateWebMessage("zh-CN", "sidebar.snooze.hour")} (3:00 PM)`);
+    expect(preset?.label).toBe(translateWebMessage("zh-CN", "sidebar.snooze.hour"));
+    expect(preset?.detail).toBe("3:00 PM");
     const englishItems = buildThreadActionMenuItems(baseState);
     expect(
       englishItems
         .find((item) => item.id === "snooze")
         ?.children?.find((item) => item.id === "snooze:hour")?.label,
-    ).toBe("In 1 hour (3:00 PM)");
+    ).toBe("In 1 hour");
   });
 
   it.each([false, true])(

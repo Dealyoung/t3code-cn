@@ -42,6 +42,7 @@ it("a new draft does not load its reserved thread before the server lists it", a
   using fetchSpy = vi.spyOn(globalThis, "fetch");
   __setClientSettingsForTests({
     ...DEFAULT_CLIENT_SETTINGS,
+    appLocale: "en",
     onboardingCompletedAt: "2026-01-01T00:00:00.000Z",
   });
   const draftId = DraftId.make("draft-27443");
@@ -72,6 +73,7 @@ it("opens the thread actions menu for an older settled thread the shell leaves o
   using _environment = installFakeEnvironment([thread]);
   __setClientSettingsForTests({
     ...DEFAULT_CLIENT_SETTINGS,
+    appLocale: "en",
     onboardingCompletedAt: "2026-01-01T00:00:00.000Z",
   });
 

@@ -1,3 +1,4 @@
+import type { ResolvedAppLocale } from "./appLocale.ts";
 import {
   type EnvironmentId,
   type ModelSelection,
@@ -18,6 +19,23 @@ import {
 } from "@t3tools/contracts";
 
 import * as DateTime from "effect/DateTime";
+
+export function formatUsageWindowLabel(
+  window: Pick<ServerProviderUsageWindow, "label" | "labelDescriptor">,
+  locale: ResolvedAppLocale,
+): string {
+  const descriptor = window.labelDescriptor;
+  if (locale !== "zh-CN" || !descriptor) return window.label;
+  if (descriptor.code === "weeklyScoped") return `每周 · ${descriptor.displayName}`;
+  const labels = {
+    session: "会话",
+    weekly: "每周",
+    monthly: "每月",
+    monthlyCreditLimit: "月度额度上限",
+    monthlySpend: "月度支出",
+  };
+  return labels[descriptor.code];
+}
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -390,7 +408,13 @@ export function collectLimitAccounts(presentations: LimitPresentations): readonl
   return [...accounts.values()];
 }
 
-export function collectLimitNotices(presentations: LimitPresentations): readonly string[] {
+export function collectLimitNotices(
+  presentations: LimitPresentations,
+  noAccountsReported = "No accounts reported.",
+  localizeFallback: (message: "Could not read limits." | "No limits reported.") => string = (
+    message,
+  ) => message,
+): readonly string[] {
   const label = (environmentLabel: string, subject: string) =>
     presentations.size > 1 ? `${environmentLabel} · ${subject}` : subject;
   const notices: string[] = [];
@@ -398,16 +422,21 @@ export function collectLimitNotices(presentations: LimitPresentations): readonly
     const environmentLabel = presentation.entry.target.label;
     for (const provider of providersWithLimits(presentation.serverConfig?.providers ?? [])) {
       if (provider.usageLimits?.unavailable?.reason === "unsupported") continue;
-      const notice = provider.usageLimits ? limitsNotice(provider.usageLimits) : null;
+      const limits = provider.usageLimits;
+      const notice = !limits
+        ? null
+        : limits.unavailable?.reason === "probeFailed"
+          ? (limits.unavailable.message ?? localizeFallback("Could not read limits."))
+          : limits.windows.length === 0
+            ? localizeFallback("No limits reported.")
+            : null;
       const name = provider.displayName?.trim() || String(provider.driver);
       if (notice) notices.push(`${label(environmentLabel, name)}: ${notice}`);
     }
     for (const source of presentation.serverConfig?.usageLimitSources ?? []) {
-      if (source.error) {
-        notices.push(`${label(environmentLabel, source.label)}: ${source.error}`);
-      } else if (source.accounts.length === 0) {
-        notices.push(`${label(environmentLabel, source.label)}: No accounts reported.`);
-      }
+      if (source.error) notices.push(`${label(environmentLabel, source.label)}: ${source.error}`);
+      else if (source.accounts.length === 0)
+        notices.push(`${label(environmentLabel, source.label)}: ${noAccountsReported}`);
     }
   }
   return notices;
@@ -423,6 +452,7 @@ export interface LimitPoolWindow {
   readonly id: string;
   readonly kind: ServerProviderUsageWindow["kind"];
   readonly label: string;
+  readonly labelDescriptor?: ServerProviderUsageWindow["labelDescriptor"];
   readonly members: readonly LimitPoolMember[];
   readonly columns: ReadonlyArray<
     LimitPoolMember | { readonly account: LimitAccount; readonly window: null }
@@ -602,6 +632,7 @@ function poolWindows(accounts: readonly LimitAccount[], now: number): readonly L
       id,
       kind: first.kind,
       label: first.label,
+      ...(first.labelDescriptor ? { labelDescriptor: first.labelDescriptor } : {}),
       members,
       columns: accounts.map(
         (account) => memberByAccount.get(account.key) ?? { account, window: null },
